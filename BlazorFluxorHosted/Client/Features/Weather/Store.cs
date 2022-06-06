@@ -5,13 +5,23 @@
         [FeatureState]
         public record WeatherState
         {
-            public bool Initialized { get; init; }
+            public bool IsInitialized { get; init; }
             public bool IsLoading { get; init; }
             public IEnumerable<WeatherForecast> Forecasts { get; init; }
         }
 
-        public class SetInitializedAction { }
+        public class SetIsInitializedAction 
+        {
+            public bool IsInitialized { get; }
+
+            public SetIsInitializedAction(bool isInitialized)
+            {
+                IsInitialized = isInitialized;
+            }
+        }
+        
         public class LoadForecastsAction { }
+        
         public class SetForecastsAction
         {
             public IEnumerable<WeatherForecast> Forecasts { get; }
@@ -22,13 +32,13 @@
             }
         }
 
-        public class SetLoadingAction
+        public class SetIsLoadingAction
         {
-            public bool Loading { get; }
+            public bool IsLoading { get; }
 
-            public SetLoadingAction(bool loading)
+            public SetIsLoadingAction(bool isLoading)
             {
-                Loading = loading;
+                IsLoading = isLoading;
             }
         }
         public static class Reducers
@@ -48,20 +58,20 @@
             }
 
             [ReducerMethod]
-            public static WeatherState ReduceSetLoadingAction(WeatherState state, SetLoadingAction action)
+            public static WeatherState ReduceSetIsLoadingAction(WeatherState state, SetIsLoadingAction action)
             {
                 return state with
                 {
-                    IsLoading = action.Loading
+                    IsLoading = action.IsLoading
                 };
             }
 
-            [ReducerMethod(typeof(SetInitializedAction))]
-            public static WeatherState ReduceSetInitializedAction(WeatherState state)
+            [ReducerMethod(typeof(SetIsInitializedAction))]
+            public static WeatherState ReduceSetIsInitializedAction(WeatherState state)
             {
                 return state with
                 {
-                    Initialized = true
+                    IsInitialized = true
                 };
             }
         }
@@ -69,17 +79,16 @@
         public class Effects
         {
             // Since a Reducer cannot call out to an API,
-            // we need Effect methods to do it.
+            // we need Effect methods to do that.
 
             // Effect handlers cannot (and should not) affect state directly. They
             // are triggered when the action they are interested in is dispatched
             // through the store, and as a response they can dispatch new actions.
 
-            private readonly HttpClient Http;
-
             // Similar to the Reducers class but with one big and obvious difference:
             // Effects class has a constructor into which we can inject dependencies,
             // and then use in each EffectMethod:
+            private readonly HttpClient Http;
             public Effects(HttpClient http)
             {
                 Http = http;
@@ -88,27 +97,18 @@
             [EffectMethod(typeof(LoadForecastsAction))]
             public async Task LoadForecasts(IDispatcher dispatcher)
             {
-                dispatcher.Dispatch(new SetLoadingAction(true));
-                IEnumerable<WeatherForecast>? forecasts = await CallForecasts();
-                dispatcher.Dispatch(new SetForecastsAction(forecasts));
-                dispatcher.Dispatch(new SetLoadingAction(false));
-            }
+                dispatcher.Dispatch(new SetIsLoadingAction(true));
 
-            private async Task<IEnumerable<WeatherForecast>> CallForecasts()
-            {
-                Console.WriteLine("CallForecasts!");
+                // Simulate-ish slow connection (to view loading spinner in development.
+                await Task.Delay(3000);
 
-                try
+                IEnumerable<WeatherForecast>? forecasts =
+                    await Http.GetFromJsonAsync<IEnumerable<WeatherForecast>>("WeatherForecast");
+
+                if (forecasts is not null)
                 {
-                    var casts = await Http.GetFromJsonAsync<IEnumerable<WeatherForecast>>("WeatherForecast");
-
-                    return casts;
-
-                }
-                catch (Exception ex)
-                {
-
-                    throw;
+                    dispatcher.Dispatch(new SetForecastsAction(forecasts));
+                    dispatcher.Dispatch(new SetIsLoadingAction(false));
                 }
             }
         }

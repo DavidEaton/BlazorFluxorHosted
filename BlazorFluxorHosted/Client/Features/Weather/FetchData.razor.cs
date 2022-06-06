@@ -4,19 +4,22 @@ namespace BlazorFluxorHosted.Client.Features.Weather
 {
     public partial class FetchData : ComponentBase, IDisposable
     {
-        [Inject] private IState<WeatherState> WeatherState { get; set; }
-        [Inject] public IDispatcher Dispatcher { get; set; }
+        [Inject]
+        private IState<WeatherState> WeatherState { get; set; }
+        
+        [Inject]
+        public IDispatcher Dispatcher { get; set; }
 
         private IEnumerable<WeatherForecast> Forecasts => WeatherState.Value.Forecasts;
 
-        private bool loading => WeatherState.Value.IsLoading;
+        private bool isLoading => WeatherState.Value.IsLoading;
 
         protected override async Task OnInitializedAsync()
         {
-            if (WeatherState.Value.Initialized == false)
+            if (WeatherState.Value.IsInitialized == false)
             {
                 await LoadForecasts();
-                Dispatcher.Dispatch(new SetInitializedAction());
+                Dispatcher.Dispatch(new SetIsInitializedAction(true));
             }
         }
 
