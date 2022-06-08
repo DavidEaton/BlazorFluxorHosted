@@ -12,16 +12,24 @@ namespace BlazorFluxorHosted.Client.Features.Weather
 
         private IEnumerable<WeatherForecast> Forecasts => WeatherState.Value.Forecasts;
 
-        private bool isLoading => WeatherState.Value.IsLoading;
+        private bool IsInitialized => WeatherState.Value.IsInitialized;
+        private bool IsLoading => WeatherState.Value.IsLoading;
 
         protected override void OnInitialized()
         {
-            base.OnInitialized();
-            LoadForecasts();
+            Console.WriteLine($"OnInitialized! IsInitialized: {IsInitialized}, IsLoading: {IsLoading}");
+            if (!IsInitialized)
+            {
+                LoadForecasts();
+                Dispatcher.Dispatch(new SetIsInitializedAction());
+            }
         }
 
         private void LoadForecasts()
         {
+            Console.WriteLine($"LoadForecasts! IsInitialized: {IsInitialized}");
+            Console.WriteLine($"LoadForecasts! IsLoading: {IsLoading}");
+
             Dispatcher.Dispatch(new FetchDataAction());
         }
 

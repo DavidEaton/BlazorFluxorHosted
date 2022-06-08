@@ -5,12 +5,15 @@
 
 <p>This component demonstrates fetching data from the server.</p>
 
-@if (isLoading)
+<p>IsLoading: @WeatherState.Value.IsLoading</p>
+<p>IsInitialized: @WeatherState.Value.IsInitialized</p>
+
+@if (WeatherState.Value.IsLoading)
 {
     <img src="/loading-loading-symbol.gif" />
 }
 
-@if (!isLoading && Forecasts is not null)
+@if (!IsLoading && Forecasts is not null)
 {
     <Forecasts WeatherForecasts="Forecasts" />
     <br />

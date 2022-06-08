@@ -10,6 +10,7 @@ namespace BlazorFluxorHosted.Client.Features.Counter
         [Inject]
         public IDispatcher Dispatcher { get; set; }
 
+        public int Count => CounterState.Value.ClickCount;
         private void IncrementCount()
         {
             var action = new IncrementCounterAction();

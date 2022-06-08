@@ -2,52 +2,61 @@
 
 namespace BlazorFluxorHosted.Client.Features.Weather
 {
+    // Comments taken from Peter Morris, Fluxor author:
+    // https://github.com/mrpmorris/Fluxor/blob/master/Docs/README.md
     public class Store
     {
+        // THE STATE
         [FeatureState]
         public record WeatherState
         {
             public bool IsLoading { get; init; } = default;
+            public bool IsInitialized { get; init; } = default;
             public IEnumerable<WeatherForecast> Forecasts { get; init; }
-            private WeatherState() { } // Initialize the state properties
+            private WeatherState() { } // Initialize the state properties 
             public WeatherState(IEnumerable<WeatherForecast> forecasts)
             {
                 Forecasts = forecasts ?? Array.Empty<WeatherForecast>();
             }
         }
 
-        public class FetchDataAction { }
+        // ACTIONS
+        public class FetchDataAction
+        {
+            public FetchDataAction()
+            {
+                Console.WriteLine("Creating FetchDataAction! (Action)");
+            }
+        }
         public class FetchDataResultAction
         {
             public IEnumerable<WeatherForecast> Forecasts { get; }
 
             public FetchDataResultAction(IEnumerable<WeatherForecast> forecasts)
             {
+                Console.WriteLine("Creating FetchDataResultAction! (Action)");
                 Forecasts = forecasts;
             }
         }
-
-        public class SetForecastsAction
-        {
-            public IEnumerable<WeatherForecast> Forecasts { get; }
-
-            public SetForecastsAction(IEnumerable<WeatherForecast> forecasts)
-            {
-                Forecasts = forecasts;
-            }
-        }
-
+        public class SetIsInitializedAction { }
         public class SetIsLoadingAction
         {
             public bool IsLoading { get; }
 
             public SetIsLoadingAction(bool isLoading)
             {
+                Console.WriteLine($"Creating SetIsLoadingAction! (Action) isLoading: {isLoading})");
                 IsLoading = isLoading;
             }
         }
+
+        // REDUCERS
         public static class Reducers
         {
+            // Reducers methods accept previous state + action to create and return new state
+
+            // Reducers methods return state. Nothing else (like an Effect method) returns state.
+
             // Tip: Do not inject dependencies into reducers!
             // Reducers should ideally be pure functions; if you find a need
             // to inject dependencies into a reducer then you might be taking
@@ -56,6 +65,7 @@ namespace BlazorFluxorHosted.Client.Features.Weather
             [ReducerMethod]
             public static WeatherState ReduceFetchDataAction(WeatherState state, FetchDataAction action)
             {
+                Console.WriteLine("ReduceFetchDataAction! (ReducerMethod)");
                 return state with
                 {
                     IsLoading = true,
@@ -66,6 +76,7 @@ namespace BlazorFluxorHosted.Client.Features.Weather
             [ReducerMethod]
             public static WeatherState ReduceFetchDataResultAction(WeatherState state, FetchDataResultAction action)
             {
+                Console.WriteLine("ReduceFetchDataResultAction! (ReducerMethod)");
                 return state with
                 {
                     IsLoading = false,
@@ -73,29 +84,28 @@ namespace BlazorFluxorHosted.Client.Features.Weather
                 };
             }
 
-
-
-
-
-            [ReducerMethod]
-            public static WeatherState ReduceSetForecastsAction(WeatherState state, SetForecastsAction action)
-            {
-                return state with
-                {
-                    Forecasts = action.Forecasts
-                };
-            }
-
             [ReducerMethod]
             public static WeatherState ReduceSetIsLoadingAction(WeatherState state, SetIsLoadingAction action)
             {
+                Console.WriteLine("ReduceSetIsLoadingAction! (ReducerMethod)");
                 return state with
                 {
                     IsLoading = action.IsLoading
                 };
             }
+
+            [ReducerMethod]
+            public static WeatherState ReduceSetIsInitializedAction(WeatherState state, SetIsInitializedAction action)
+            {
+                Console.WriteLine("ReduceSetIsInitializedAction! (ReducerMethod)");
+                return state with
+                {
+                    IsInitialized = true
+                };
+            }
         }
 
+        // EFFECTS
         public class Effects
         {
             // Since a Reducer cannot call out to an API, we need Effect methods to
@@ -110,37 +120,42 @@ namespace BlazorFluxorHosted.Client.Features.Weather
             // and then use in each EffectMethod:
 
             private readonly IWeatherForecastService WeatherForecastService;
-            public Effects(IWeatherForecastService weatherForecastService)
+            private readonly IDispatcher Dispatcher;
+
+            public Effects(IWeatherForecastService weatherForecastService, IDispatcher dispatcher)
             {
                 WeatherForecastService = weatherForecastService;
+                Dispatcher = dispatcher;
             }
 
             [EffectMethod(typeof(FetchDataAction))]
             public async Task HandleFetchDataAction(IDispatcher dispatcher)
             {
+                Console.WriteLine("HandleFetchDataAction! (EffectMethod)");
+                Dispatcher.Dispatch(new SetIsLoadingAction(true));
                 await Task.Delay(1000);
                 var forecasts = await WeatherForecastService.GetForecastAsync(DateTime.Now);
                 dispatcher.Dispatch(new FetchDataResultAction(forecasts));
             }
 
             // NO LONGER USED
-            [EffectMethod(typeof(FetchDataAction))]
-            public async Task LoadForecasts(IDispatcher dispatcher)
-            {
-                dispatcher.Dispatch(new SetIsLoadingAction(true));
+            //[EffectMethod(typeof(FetchDataAction))]
+            //public async Task LoadForecasts(IDispatcher dispatcher)
+            //{
+            //    dispatcher.Dispatch(new SetIsLoadingAction(true));
 
-                // Simulate-ish slow connection (to view loading spinner in development.
-                await Task.Delay(3000);
+            //    // Simulate-ish slow connection (to view loading spinner in development.
+            //    await Task.Delay(3000);
 
-                IEnumerable<WeatherForecast>? forecasts =
-                    await WeatherForecastService.GetForecastAsync(DateTime.Now);
+            //    IEnumerable<WeatherForecast>? forecasts =
+            //        await WeatherForecastService.GetForecastAsync(DateTime.Now);
 
-                if (forecasts is not null)
-                {
-                    dispatcher.Dispatch(new SetForecastsAction(forecasts));
-                    dispatcher.Dispatch(new SetIsLoadingAction(false));
-                }
-            }
+            //    if (forecasts is not null)
+            //    {
+            //        dispatcher.Dispatch(new SetForecastsAction(forecasts));
+            //        dispatcher.Dispatch(new SetIsLoadingAction(false));
+            //    }
+            //}
         }
     }
 }
