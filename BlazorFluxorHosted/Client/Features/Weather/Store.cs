@@ -5,9 +5,14 @@
         [FeatureState]
         public record WeatherState
         {
-            public bool IsInitialized { get; init; }
-            public bool IsLoading { get; init; }
+            public bool IsInitialized { get; init; } = default;
+            public bool IsLoading { get; init; } = default;
             public IEnumerable<WeatherForecast> Forecasts { get; init; }
+
+            public WeatherState(IEnumerable<WeatherForecast> forecasts)
+            {
+                Forecasts = forecasts ?? Array.Empty<WeatherForecast>();
+            }
         }
 
         public class SetIsInitializedAction 
@@ -16,6 +21,7 @@
 
             public SetIsInitializedAction(bool isInitialized)
             {
+                Console.WriteLine("SetIsInitializedAction created!");
                 IsInitialized = isInitialized;
             }
         }

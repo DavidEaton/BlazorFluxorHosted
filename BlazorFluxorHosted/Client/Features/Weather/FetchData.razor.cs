@@ -18,15 +18,17 @@ namespace BlazorFluxorHosted.Client.Features.Weather
         {
             if (WeatherState.Value.IsInitialized == false)
             {
-                await LoadForecasts();
+                LoadForecasts();
                 Dispatcher.Dispatch(new SetIsInitializedAction(true));
             }
         }
 
-        private async Task LoadForecasts()
+        private void LoadForecasts()
         {
             Dispatcher.Dispatch(new LoadForecastsAction());
         }
+
+        // Wire-up state
         protected override void OnAfterRender(bool firstRender)
         {
             if (firstRender)
