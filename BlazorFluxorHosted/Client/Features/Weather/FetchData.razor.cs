@@ -14,18 +14,15 @@ namespace BlazorFluxorHosted.Client.Features.Weather
 
         private bool isLoading => WeatherState.Value.IsLoading;
 
-        protected override async Task OnInitializedAsync()
+        protected override void OnInitialized()
         {
-            if (WeatherState.Value.IsInitialized == false)
-            {
-                LoadForecasts();
-                Dispatcher.Dispatch(new SetIsInitializedAction(true));
-            }
+            base.OnInitialized();
+            LoadForecasts();
         }
 
         private void LoadForecasts()
         {
-            Dispatcher.Dispatch(new LoadForecastsAction());
+            Dispatcher.Dispatch(new FetchDataAction());
         }
 
         // Wire-up state

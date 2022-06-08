@@ -1,33 +1,32 @@
-﻿namespace BlazorFluxorHosted.Client.Features.Weather
+﻿using BlazorFluxorHosted.Client.Services;
+
+namespace BlazorFluxorHosted.Client.Features.Weather
 {
     public class Store
     {
         [FeatureState]
         public record WeatherState
         {
-            public bool IsInitialized { get; init; } = default;
             public bool IsLoading { get; init; } = default;
             public IEnumerable<WeatherForecast> Forecasts { get; init; }
-
+            private WeatherState() { } // Initialize the state properties
             public WeatherState(IEnumerable<WeatherForecast> forecasts)
             {
                 Forecasts = forecasts ?? Array.Empty<WeatherForecast>();
             }
         }
 
-        public class SetIsInitializedAction 
+        public class FetchDataAction { }
+        public class FetchDataResultAction
         {
-            public bool IsInitialized { get; }
+            public IEnumerable<WeatherForecast> Forecasts { get; }
 
-            public SetIsInitializedAction(bool isInitialized)
+            public FetchDataResultAction(IEnumerable<WeatherForecast> forecasts)
             {
-                Console.WriteLine("SetIsInitializedAction created!");
-                IsInitialized = isInitialized;
+                Forecasts = forecasts;
             }
         }
-        
-        public class LoadForecastsAction { }
-        
+
         public class SetForecastsAction
         {
             public IEnumerable<WeatherForecast> Forecasts { get; }
@@ -55,6 +54,30 @@
             // the wrong approach, and should instead be using an Effect.
 
             [ReducerMethod]
+            public static WeatherState ReduceFetchDataAction(WeatherState state, FetchDataAction action)
+            {
+                return state with
+                {
+                    IsLoading = true,
+                    Forecasts = null
+                };
+            }
+
+            [ReducerMethod]
+            public static WeatherState ReduceFetchDataResultAction(WeatherState state, FetchDataResultAction action)
+            {
+                return state with
+                {
+                    IsLoading = false,
+                    Forecasts = action.Forecasts
+                };
+            }
+
+
+
+
+
+            [ReducerMethod]
             public static WeatherState ReduceSetForecastsAction(WeatherState state, SetForecastsAction action)
             {
                 return state with
@@ -71,21 +94,12 @@
                     IsLoading = action.IsLoading
                 };
             }
-
-            [ReducerMethod(typeof(SetIsInitializedAction))]
-            public static WeatherState ReduceSetIsInitializedAction(WeatherState state)
-            {
-                return state with
-                {
-                    IsInitialized = true
-                };
-            }
         }
 
         public class Effects
         {
-            // Since a Reducer cannot call out to an API,
-            // we need Effect methods to do that.
+            // Since a Reducer cannot call out to an API, we need Effect methods to
+            // do that.
 
             // Effect handlers cannot (and should not) affect state directly. They
             // are triggered when the action they are interested in is dispatched
@@ -94,13 +108,23 @@
             // Similar to the Reducers class but with one big and obvious difference:
             // Effects class has a constructor into which we can inject dependencies,
             // and then use in each EffectMethod:
-            private readonly HttpClient Http;
-            public Effects(HttpClient http)
+
+            private readonly IWeatherForecastService WeatherForecastService;
+            public Effects(IWeatherForecastService weatherForecastService)
             {
-                Http = http;
+                WeatherForecastService = weatherForecastService;
             }
 
-            [EffectMethod(typeof(LoadForecastsAction))]
+            [EffectMethod(typeof(FetchDataAction))]
+            public async Task HandleFetchDataAction(IDispatcher dispatcher)
+            {
+                await Task.Delay(1000);
+                var forecasts = await WeatherForecastService.GetForecastAsync(DateTime.Now);
+                dispatcher.Dispatch(new FetchDataResultAction(forecasts));
+            }
+
+            // NO LONGER USED
+            [EffectMethod(typeof(FetchDataAction))]
             public async Task LoadForecasts(IDispatcher dispatcher)
             {
                 dispatcher.Dispatch(new SetIsLoadingAction(true));
@@ -109,7 +133,7 @@
                 await Task.Delay(3000);
 
                 IEnumerable<WeatherForecast>? forecasts =
-                    await Http.GetFromJsonAsync<IEnumerable<WeatherForecast>>("WeatherForecast");
+                    await WeatherForecastService.GetForecastAsync(DateTime.Now);
 
                 if (forecasts is not null)
                 {
