@@ -10,7 +10,9 @@
 
 @if (WeatherState.Value.IsLoading)
 {
-    <img src="/loading-loading-symbol.gif" />
+    <div class="mx-auto" style="width: 1px;">
+        <img src="/loading-loading-symbol.gif" />
+    </div>
 }
 
 @if (!IsLoading && Forecasts is not null)
